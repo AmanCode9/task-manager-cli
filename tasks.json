@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "title": "Finish DSA assignment",
+    "description": "To complete the assignment in due time",
+    "due_date": "2025-09-05",
+    "status": "Pending",
+    "created_at": "2025-09-02T12:11:58.192565"
+  }
+]
