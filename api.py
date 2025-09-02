@@ -4,23 +4,22 @@ from pydantic import BaseModel
 from typing import Optional, List
 from tasks import TaskManager, Task
 import uvicorn
+import os
 
-# Create FastAPI app
+
 app = FastAPI(title="Task Manager API", version="1.0.0")
 
-# Add CORS middleware to allow React frontend to connect
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # React dev server
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize TaskManager
 task_manager = TaskManager()
 
-# Pydantic models for request/response
 class TaskCreate(BaseModel):
     title: str
     description: str = ""
@@ -58,13 +57,11 @@ async def root():
 
 @app.get("/tasks", response_model=List[TaskResponse])
 async def get_all_tasks():
-    """Get all tasks"""
     tasks = task_manager.get_all()
     return [TaskResponse.from_task(task) for task in tasks]
 
 @app.post("/tasks", response_model=TaskResponse)
 async def create_task(task_data: TaskCreate):
-    """Create a new task"""
     task = task_manager.add_task(
         title=task_data.title,
         description=task_data.description,
@@ -74,7 +71,6 @@ async def create_task(task_data: TaskCreate):
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: int):
-    """Get a specific task by ID"""
     task = task_manager.find(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -82,12 +78,10 @@ async def get_task(task_id: int):
 
 @app.put("/tasks/{task_id}", response_model=TaskResponse)
 async def update_task(task_id: int, task_data: TaskUpdate):
-    """Update a task"""
     task = task_manager.find(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    # Update the task
     success = task_manager.update(
         task_id=task_id,
         title=task_data.title,
@@ -98,13 +92,11 @@ async def update_task(task_id: int, task_data: TaskUpdate):
     if not success:
         raise HTTPException(status_code=400, detail="Failed to update task")
     
-    # Return updated task
     updated_task = task_manager.find(task_id)
     return TaskResponse.from_task(updated_task)
 
-@app.patch("/tasks/{task_id}/complete")
+@app.patch("/tasks/{task_id}/complete", response_model=TaskResponse)
 async def mark_task_complete(task_id: int):
-    """Mark a task as complete"""
     success = task_manager.mark_complete(task_id)
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -114,7 +106,6 @@ async def mark_task_complete(task_id: int):
 
 @app.delete("/tasks/{task_id}")
 async def delete_task(task_id: int):
-    """Delete a task"""
     success = task_manager.delete(task_id)
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -123,30 +114,23 @@ async def delete_task(task_id: int):
 
 @app.get("/tasks/search/{keyword}", response_model=List[TaskResponse])
 async def search_tasks(keyword: str):
-    """Search tasks by keyword"""
     tasks = task_manager.search(keyword)
     return [TaskResponse.from_task(task) for task in tasks]
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
     return {
         "status": "healthy",
         "total_tasks": len(task_manager.get_all()),
         "api_version": "1.0.0"
     }
 
-# Run the server
+# Run the server locally only
 if __name__ == "__main__":
-    print("🚀 Starting Task Manager API...")
-    print("📝 API Documentation: http://127.0.0.1:8000/docs")
-    print("🔍 Health Check: http://127.0.0.1:8000/health")
-    print("📋 All Tasks: http://127.0.0.1:8000/tasks")
-    
+    port = int(os.environ.get("PORT", 8000))  
     uvicorn.run(
         "api:app",
-        host="0.0.0.0",  # Changed to accept all interfaces
-        port=8001,       # Changed port to 8001
-        reload=True,     # Auto-reload on code changes
+        host="0.0.0.0",
+        port=port,
         log_level="info"
     )
